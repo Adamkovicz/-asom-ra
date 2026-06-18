@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#12151A">
+<title>Backyard Ultra · Časomíra</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap');
+
+:root{
+  --bg:#12151A; --panel:#1B2027; --panel-alt:#20262E; --border:#2B323C;
+  --text:#F1EDE4; --text-dim:#8C9099; --text-faint:#5A6068;
+  --accent:#FF6A39; --accent-dim:#C9521F;
+  --course:#3DA5D9; --halfway:#F2B632; --depot:#4FAE74; --dnf:#E2585A; --winner:#FFD166;
+}
+*{ box-sizing:border-box; }
+html,body{ margin:0; padding:0; background:var(--bg); color:var(--text); font-family:'Inter',Arial,sans-serif; min-height:100%; }
+.app-shell{ max-width:1000px; margin:0 auto; padding:20px 16px 50px; }
+.f-display{ font-family:'Oswald',Arial,sans-serif; letter-spacing:0.02em; }
+.f-mono{ font-family:'JetBrains Mono',monospace; font-variant-numeric:tabular-nums; }
+
+.top-row{ display:flex; align-items:center; gap:8px; margin-bottom:16px; }
+.logo-title{ font-family:'Oswald',Arial,sans-serif; font-size:20px; letter-spacing:0.02em; }
+
+.tabs{ display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; }
+.tab-btn{ display:flex; align-items:center; gap:6px; border-radius:12px; padding:10px 16px; font-size:14px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:transparent; color:var(--text); font-family:'Inter',Arial,sans-serif; }
+.tab-btn.active{ background:var(--accent); color:#1A1006; border-color:var(--accent); }
+
+.panel{ background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:16px; }
+.panel-alt{ background:var(--panel-alt); border:1px solid var(--border); border-radius:12px; padding:12px; }
+
+.header-row{ display:flex; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+.header-label{ font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-dim); margin-bottom:4px; }
+.header-countdown{ font-family:'JetBrains Mono',monospace; font-size:38px; font-weight:700; line-height:1; }
+.header-sub{ font-size:12px; color:var(--text-faint); margin-top:6px; }
+.header-clock{ font-family:'JetBrains Mono',monospace; font-size:18px; }
+.header-meta{ font-size:12px; color:var(--text-dim); margin-top:4px; text-align:right; }
+
+.search-row{ display:flex; gap:8px; margin:16px 0; }
+.search-input-wrap{ position:relative; flex:1; }
+.search-input-wrap input{ width:100%; padding:11px 12px 11px 34px; }
+.search-icon{ position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--text-faint); font-size:14px; }
+
+input[type=number], input[type=text], input[type=datetime-local]{
+  background:var(--panel-alt); border:1px solid var(--border); color:var(--text);
+  border-radius:10px; padding:11px 12px; font-family:'JetBrains Mono',monospace; font-size:14px;
+}
+input::placeholder{ color:var(--text-faint); font-family:'Inter',Arial,sans-serif; }
+
+.legend{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+.tag{ display:inline-flex; align-items:center; gap:4px; border-radius:999px; padding:3px 10px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.03em; border:1px solid transparent; white-space:nowrap; }
+.tag-course{ background:rgba(61,165,217,0.14); border-color:var(--course); color:var(--course); }
+.tag-halfway{ background:rgba(242,182,50,0.14); border-color:var(--halfway); color:var(--halfway); }
+.tag-depot{ background:rgba(79,174,116,0.14); border-color:var(--depot); color:var(--depot); }
+.tag-dnf{ background:rgba(226,88,90,0.12); border-color:var(--dnf); color:var(--dnf); }
+.tag-winner{ background:rgba(255,209,102,0.16); border-color:var(--winner); color:var(--winner); }
+
+.tiles-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+@media (min-width:560px){ .tiles-grid{ grid-template-columns:repeat(4,1fr); } }
+@media (min-width:760px){ .tiles-grid{ grid-template-columns:repeat(6,1fr); } }
+
+.bib-tile{ position:relative; border-radius:14px; padding:16px 6px 10px; display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer; background:var(--panel-alt); border:1px solid var(--border); }
+.bib-tile.selected{ box-shadow:0 0 0 2px var(--accent); }
+.bib-pin{ position:absolute; top:-5px; width:9px; height:9px; border-radius:50%; background:var(--border); box-shadow:inset 0 1px 2px rgba(0,0,0,0.6); }
+.bib-pin.l{ left:14px; } .bib-pin.r{ right:14px; }
+.bib-number{ font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:700; line-height:1; }
+.bib-name{ font-size:11px; color:var(--text-dim); max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:center; }
+
+@keyframes pulseWarn{ 0%,100%{ box-shadow:0 0 0 0 rgba(255,106,57,0); } 50%{ box-shadow:0 0 0 6px rgba(255,106,57,0.35); } }
+.warn{ animation:pulseWarn 1.3s ease-in-out infinite; }
+
+.btn{ display:inline-flex; align-items:center; justify-content:center; gap:6px; border-radius:12px; padding:11px 16px; font-size:14px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:transparent; color:var(--text); font-family:'Inter',Arial,sans-serif; }
+.btn-accent{ background:var(--accent); border-color:var(--accent); color:#1A1006; }
+.btn-danger{ background:rgba(226,88,90,0.14); border-color:var(--dnf); color:var(--dnf); }
+.btn:disabled{ opacity:0.35; cursor:not-allowed; }
+.btn-block{ width:100%; }
+
+.modal-overlay{ position:fixed; inset:0; background:rgba(0,0,0,0.55); display:flex; align-items:flex-end; justify-content:center; z-index:40; }
+.sheet{ background:var(--panel); border-radius:18px 18px 0 0; width:100%; max-width:560px; padding:20px; padding-bottom:30px; }
+.sheet-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+.sheet-bib{ font-family:'JetBrains Mono',monospace; font-size:28px; color:var(--accent); font-weight:700; }
+.sheet-row{ display:flex; justify-content:space-between; align-items:center; background:var(--panel-alt); border-radius:12px; padding:12px; margin-bottom:10px; gap:10px; }
+
+.table-wrap{ overflow-x:auto; }
+table{ width:100%; border-collapse:collapse; font-size:13px; }
+thead tr{ background:var(--panel-alt); color:var(--text-dim); text-transform:uppercase; font-size:11px; letter-spacing:0.04em; }
+th, td{ text-align:left; padding:10px 12px; white-space:nowrap; }
+tbody tr{ border-top:1px solid var(--border); }
+
+.toast{ position:fixed; top:16px; left:50%; transform:translate(-50%,-150%); background:var(--panel); border:1px solid var(--border); border-radius:999px; padding:10px 18px; font-size:13px; z-index:50; transition:transform .25s ease; box-shadow:0 6px 24px rgba(0,0,0,0.4); }
+.toast.show{ transform:translate(-50%,0); }
+
+.sync-badge{ position:fixed; top:14px; right:14px; z-index:50; display:flex; align-items:center; gap:6px; background:var(--panel); border:1px solid var(--border); border-radius:999px; padding:5px 11px; font-size:11px; color:var(--text-dim); }
+.sync-dot{ width:7px; height:7px; border-radius:50%; background:var(--text-faint); flex-shrink:0; }
+.sync-dot.online{ background:var(--depot); box-shadow:0 0 5px var(--depot); }
+.sync-dot.syncing{ background:var(--halfway); animation:pulseWarn 1s ease-in-out infinite; }
+.sync-dot.error{ background:var(--dnf); box-shadow:0 0 5px var(--dnf); }
+.sync-dot.connecting{ background:var(--course); animation:pulseWarn 1.4s ease-in-out infinite; }
+
+.setup-wrap{ display:flex; align-items:center; justify-content:center; min-height:100vh; padding:20px; }
+.setup-card{ background:var(--panel); border:1px solid var(--border); border-radius:18px; padding:28px; width:100%; max-width:420px; }
+.field-label{ display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-dim); margin-bottom:6px; }
+.field{ width:100%; margin-bottom:16px; }
+.error-text{ color:var(--dnf); font-size:13px; margin-bottom:12px; }
+
+::-webkit-scrollbar{ width:6px; height:6px; }
+::-webkit-scrollbar-thumb{ background:var(--border); border-radius:3px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast" class="toast"></div>
+<div class="sync-badge">
+  <span id="syncDot" class="sync-dot connecting"></span>
+  <span id="syncLabel" class="f-mono">Připojování…</span>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDLffqPcXennj8eEqsYIsW40kCw8kJftSU",
+  authDomain: "dm-skladkapro.firebaseapp.com",
+  projectId: "dm-skladkapro",
+  storageBucket: "dm-skladkapro.firebasestorage.app",
+  messagingSenderId: "951211360590",
+  appId: "1:951211360590:web:08a70798bad05f0b21de1f"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp);
+// Samostatná kolekce, aby se data nemíchala se skladovým hospodářstvím.
+const raceDocRef = doc(db, "byu_timer", "race");
+
+(function () {
+  "use strict";
+
+  // Délka jednoho kola. 1 minuta = testovací režim.
+  // Pro ostrý závod změňte na 60 * 60 * 1000 (1 hodina).
+  var LAP_DURATION_MS = 60 * 1000;
+
+  /* ---------------------------- time helpers ---------------------------- */
+
+  function pad(n) { return String(n).padStart(2, "0"); }
+
+  function fmtClock(d) {
+    return pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());
+  }
+
+  function fmtDuration(ms) {
+    if (ms === null || ms === undefined || isNaN(ms)) return "–";
+    var sign = ms < 0 ? "-" : "";
+    ms = Math.abs(ms);
+    var totalSec = Math.floor(ms / 1000);
+    var h = Math.floor(totalSec / 3600);
+    var m = Math.floor((totalSec % 3600) / 60);
+    var s = totalSec % 60;
+    if (h > 0) return sign + h + ":" + pad(m) + ":" + pad(s);
+    return sign + m + ":" + pad(s);
+  }
+
+  function fmtDateTime(iso) {
+    if (!iso) return "–";
+    var d = new Date(iso);
+    return pad(d.getDate()) + "." + pad(d.getMonth() + 1) + ". " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+  }
+
+  function nextFullHour(date) {
+    var d = new Date(date);
+    d.setMinutes(0, 0, 0);
+    d.setHours(d.getHours() + 1);
+    return d;
+  }
+
+  function toLocalInputValue(date) {
+    var tz = date.getTimezoneOffset() * 60000;
+    var local = new Date(date.getTime() - tz);
+    return local.toISOString().slice(0, 16);
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  /* ------------------------------ domain ---------------------------------*/
+
+  function cloneRace(r) { return JSON.parse(JSON.stringify(r)); }
+
+  function sortBibsDnfLast(bibs, isDnfFn) {
+    return bibs.slice().sort(function (a, b) {
+      var da = isDnfFn(a) ? 1 : 0;
+      var dbv = isDnfFn(b) ? 1 : 0;
+      if (da !== dbv) return da - dbv;
+      return a - b;
+    });
+  }
+
+  function createRace(total, startISO) {
+    var runners = {}, entries = {};
+    for (var i = 1; i <= total; i++) {
+      runners[i] = { name: "Běžec " + i, status: "active", dnfLap: null };
+      entries[i] = { halfwayTime: null, finishTime: null, dnf: false };
+    }
+    var status = new Date(startISO) > new Date() ? "pending" : "running";
+    return {
+      totalRunners: total, firstLapStart: startISO, currentLap: 1, currentLapStart: startISO,
+      status: status, winnerBib: null, runners: runners, laps: { 1: { startTime: startISO, entries: entries } }
+    };
+  }
+
+  function checkWinnerMutate(draft) {
+    if (draft.status !== "running") return;
+    var survivors = Object.keys(draft.runners).filter(function (b) { return draft.runners[b].status === "active"; });
+    if (survivors.length <= 1) {
+      draft.status = "finished";
+      draft.winnerBib = survivors.length === 1 ? survivors[0] : null;
+      if (survivors.length === 1) draft.runners[survivors[0]].status = "winner";
+    }
+  }
+
+  function performRolloverMutate(draft) {
+    var lapNum = draft.currentLap;
+    var lap = draft.laps[lapNum];
+    var nextStart = new Date(new Date(draft.currentLapStart).getTime() + LAP_DURATION_MS);
+
+    Object.keys(draft.runners).forEach(function (bib) {
+      if (draft.runners[bib].status !== "active") return;
+      var entry = lap.entries[bib];
+      if (!entry || !entry.finishTime) {
+        entry.dnf = true;
+        draft.runners[bib].status = "dnf";
+        draft.runners[bib].dnfLap = lapNum;
+      }
+    });
+
+    checkWinnerMutate(draft);
+    if (draft.status === "finished") return;
+
+    var survivors = Object.keys(draft.runners).filter(function (b) { return draft.runners[b].status === "active"; });
+    var newLap = lapNum + 1;
+    var entries = {};
+    survivors.forEach(function (bib) { entries[bib] = { halfwayTime: null, finishTime: null, dnf: false }; });
+    draft.laps[newLap] = { startTime: nextStart.toISOString(), entries: entries };
+    draft.currentLap = newLap;
+    draft.currentLapStart = nextStart.toISOString();
+  }
+
+  /* ------------------------------ storage --------------------------------*/
+  // Perzistence běží přes Firestore (stejný server jako SkladovkaPro) —
+  // viz updateRace() níže a onSnapshot listener na konci souboru.
+
+  /* ----------------------------- app state -------------------------------*/
+
+  var race = null;
+  var raceLoaded = false;
+  var tab = "board";
+  var selectedBib = null;
+  var resultsLap = 1;
+  var confirmReset = false;
+  var confirmRollover = false;
+  var toastTimer = null;
+  var syncStatus = "connecting";
+
+  function updateRace(mutator) {
+    if (!race) return;
+    var draft = cloneRace(race);
+    mutator(draft);
+    race = draft; // optimistický lokální update, appka reaguje okamžitě
+    render();
+    setSyncStatus("syncing");
+    setDoc(raceDocRef, draft)
+      .then(function () { setSyncStatus("online"); })
+      .catch(function (e) {
+        setSyncStatus("error");
+        notify("Uložení na server selhalo: " + e.message);
+      });
+  }
+
+  function setSyncStatus(status) {
+    syncStatus = status;
+    var dot = document.getElementById("syncDot");
+    var label = document.getElementById("syncLabel");
+    if (dot) dot.className = "sync-dot " + status;
+    if (label) {
+      label.textContent = status === "online" ? "Online" : status === "syncing" ? "Ukládání…" : status === "error" ? "Chyba spojení" : "Připojování…";
+    }
+  }
+
+  /* -------------------------------- toast ---------------------------------*/
+
+  function notify(msg) {
+    var el = document.getElementById("toast");
+    el.textContent = msg;
+    el.classList.add("show");
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove("show"); }, 2200);
+  }
+
+  /* ------------------------------- render ---------------------------------*/
+
+  function render() {
+    var root = document.getElementById("app");
+    if (!raceLoaded) { root.innerHTML = renderLoading(); return; }
+    root.innerHTML = race ? renderShell() : renderSetup();
+  }
+
+  function renderLoading() {
+    return '<div class="setup-wrap"><div style="text-align:center;color:var(--text-dim);font-family:\'JetBrains Mono\',monospace;font-size:14px;">Připojování k serveru…</div></div>';
+  }
+
+  function renderSetup() {
+    var defaultStart = toLocalInputValue(nextFullHour(new Date()));
+    var html = "";
+    html += '<div class="setup-wrap"><div class="setup-card">';
+    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><span style="font-size:20px;">🏁</span><span class="logo-title" style="font-size:19px;">NOVÝ ZÁVOD</span></div>';
+    html += '<p style="color:var(--text-dim);font-size:13px;margin-bottom:18px;">Backyard ultra · start nového kola každou celou hodinu</p>';
+    html += '<label class="field-label">Počet běžců</label><input id="setupRunners" class="field" type="number" inputmode="numeric" value="50">';
+    html += '<label class="field-label">Start prvního kola</label><input id="setupStart" class="field" type="datetime-local" value="' + defaultStart + '">';
+    html += '<div id="setupError" class="error-text" style="display:none;"></div>';
+    html += '<button class="btn btn-accent btn-block" onclick="handleSetupSubmit()">Spustit závod</button>';
+    html += '<p style="color:var(--text-faint);font-size:12px;margin-top:12px;">Pokud zadáte čas v budoucnu, aplikace odpočítá start a kolo spustí automaticky.</p>';
+    html += '</div></div>';
+    return html;
+  }
+
+  function renderShell() {
+    var html = "";
+    html += '<div class="app-shell">';
+    html += '<div class="top-row"><span style="font-size:22px;">⏱</span><span class="logo-title">BACKYARD ULTRA · ČASOMÍRA</span></div>';
+    html += '<div class="tabs">';
+    html += tabButton("board", "Závod");
+    html += tabButton("results", "Výsledky");
+    html += tabButton("settings", "Nastavení");
+    html += "</div>";
+    html += '<div id="tabContent">' + renderTabContent() + "</div>";
+    html += "</div>";
+    if (selectedBib) html += renderActionSheet();
+    return html;
+  }
+
+  function tabButton(key, label) {
+    var cls = "tab-btn" + (tab === key ? " active" : "");
+    return '<button class="' + cls + '" onclick="setTab(\'' + key + '\')">' + label + "</button>";
+  }
+
+  function renderTabContent() {
+    if (tab === "board") return renderBoard();
+    if (tab === "results") return renderResults();
+    if (tab === "settings") return renderSettings();
+    return "";
+  }
+
+  function renderBoard() {
+    var lap = race.laps[race.currentLap];
+    var lapStart = new Date(race.currentLapStart);
+    var deadline = lapStart.getTime() + LAP_DURATION_MS;
+    var now = new Date();
+    var msToDeadline = race.status === "running" ? deadline - now.getTime() : null;
+    var msToStart = race.status === "pending" ? new Date(race.firstLapStart).getTime() - now.getTime() : null;
+
+    var bibs = sortBibsDnfLast(Object.keys(race.runners).map(Number), function (b) { return race.runners[b].status === "dnf"; });
+    var activeCount = bibs.filter(function (b) { return race.runners[b].status === "active"; }).length;
+    var dnfCount = bibs.filter(function (b) { return race.runners[b].status === "dnf"; }).length;
+
+    var headerLabel = race.status === "pending" ? "Čeká na start" : race.status === "finished" ? "Závod skončil" : "Kolo " + race.currentLap;
+    var countdownText = race.status === "pending" ? fmtDuration(msToStart) : race.status === "finished" ? "—:—" : fmtDuration(msToDeadline);
+    var subText;
+    if (race.status === "pending") subText = "Start kola 1 v " + fmtDateTime(race.firstLapStart);
+    else if (race.status === "finished") subText = race.winnerBib ? ("Vítěz: #" + race.winnerBib + " " + escapeHtml(race.runners[race.winnerBib].name)) : "Bez vítěze — všichni vypadli ve stejném kole";
+    else subText = "Další start v " + fmtDateTime(new Date(deadline).toISOString());
+
+    var html = "";
+    html += '<div class="panel" style="margin-bottom:16px;"><div class="header-row">';
+    html += '<div><div class="header-label">' + headerLabel + '</div>';
+    html += '<div class="header-countdown" id="headerCountdown">' + countdownText + '</div>';
+    html += '<div class="header-sub" id="headerSub">' + subText + '</div></div>';
+    html += '<div style="text-align:right;"><div class="header-label">Aktuální čas</div>';
+    html += '<div class="header-clock" id="headerClock">' + fmtClock(now) + '</div>';
+    html += '<div class="header-meta" id="headerMeta">' + activeCount + ' na trati · ' + dnfCount + ' vyřazeno</div></div>';
+    html += "</div></div>";
+
+    html += '<div class="search-row"><div class="search-input-wrap"><span class="search-icon">🔎</span>';
+    html += '<input id="bibSearchInput" type="number" inputmode="numeric" placeholder="Startovní číslo (skener nebo zadání + Enter)" onkeydown="handleBibSearchKeydown(event)"></div>';
+    html += '<button class="btn btn-accent" onclick="submitBibSearch()">Vybrat</button></div>';
+
+    html += '<div class="legend"><span class="tag tag-course">Na trati</span><span class="tag tag-halfway">Za polovinou</span><span class="tag tag-depot">V depu</span><span class="tag tag-dnf">Vyřazen</span><span class="tag tag-winner">Vítěz</span></div>';
+
+    html += '<div class="tiles-grid">';
+    bibs.forEach(function (bib) {
+      var runner = race.runners[bib];
+      var entry = lap.entries[bib];
+      var kind, info, warn = false;
+      if (runner.status === "dnf") { kind = "dnf"; info = "kolo " + runner.dnfLap; }
+      else if (runner.status === "winner") { kind = "winner"; info = "vítěz"; }
+      else if (entry && entry.finishTime) { kind = "depot"; info = fmtDuration(new Date(entry.finishTime) - lapStart); }
+      else if (entry && entry.halfwayTime) {
+        kind = "halfway"; info = fmtDuration(new Date(entry.halfwayTime) - lapStart);
+        warn = race.status === "running" && msToDeadline !== null && msToDeadline < 5 * 60000;
+      } else {
+        kind = "course"; info = race.status === "running" ? fmtDuration(now - lapStart) : "—";
+        warn = race.status === "running" && msToDeadline !== null && msToDeadline < 5 * 60000;
+      }
+
+      html += '<div class="bib-tile' + (warn ? " warn" : "") + (selectedBib === bib ? " selected" : "") + '" data-bib="' + bib + '" data-kind="' + kind + '" onclick="selectBib(' + bib + ')">';
+      html += '<span class="bib-pin l"></span><span class="bib-pin r"></span>';
+      html += '<span class="bib-number">' + bib + "</span>";
+      html += '<span class="bib-name">' + escapeHtml(runner.name) + "</span>";
+      html += '<span class="tag tag-' + kind + '" data-role="tile-tag">' + info + "</span>";
+      html += "</div>";
+    });
+    html += "</div>";
+    return html;
+  }
+
+  function renderActionSheet() {
+    var runner = race.runners[selectedBib];
+    var lap = race.laps[race.currentLap];
+    var entry = lap.entries[selectedBib];
+    var isActive = runner.status === "active";
+    var lapStart = new Date(race.currentLapStart);
+
+    var html = '<div class="modal-overlay" onclick="closeSheet()"><div class="sheet" onclick="event.stopPropagation()">';
+    html += '<div class="sheet-head"><div style="display:flex;align-items:baseline;gap:10px;"><span class="sheet-bib">#' + selectedBib + '</span><span style="font-size:15px;">' + escapeHtml(runner.name) + '</span></div><button class="btn" style="padding:6px 10px;" onclick="closeSheet()">✕</button></div>';
+
+    html += '<div class="legend">';
+    if (runner.status === "dnf") html += '<span class="tag tag-dnf">Vyřazen v kole ' + runner.dnfLap + '</span>';
+    if (runner.status === "winner") html += '<span class="tag tag-winner">🏆 Vítěz</span>';
+    if (isActive && entry && entry.finishTime) html += '<span class="tag tag-depot">V depu</span>';
+    if (isActive && entry && !entry.finishTime && entry.halfwayTime) html += '<span class="tag tag-halfway">Za polovinou</span>';
+    if (isActive && entry && !entry.finishTime && !entry.halfwayTime) html += '<span class="tag tag-course">Na trati</span>';
+    html += "</div>";
+
+    if (isActive) {
+      html += '<div class="sheet-row"><span>📍 Poloviční kontrola</span>';
+      if (entry.halfwayTime) {
+        html += '<span style="display:flex;align-items:center;gap:10px;"><span class="f-mono" style="font-size:13px;">' + fmtDuration(new Date(entry.halfwayTime) - lapStart) + '</span><button class="btn" style="padding:6px 10px;" onclick="undoHalfway(' + selectedBib + ')">⟲</button></span>';
+      } else {
+        html += '<button class="btn btn-accent" onclick="doHalfway(' + selectedBib + ')">Zaznamenat</button>';
+      }
+      html += "</div>";
+
+      html += '<div class="sheet-row"><span>🏁 Cíl / depo</span>';
+      if (entry.finishTime) {
+        html += '<span style="display:flex;align-items:center;gap:10px;"><span class="f-mono" style="font-size:13px;">' + fmtDuration(new Date(entry.finishTime) - lapStart) + '</span><button class="btn" style="padding:6px 10px;" onclick="undoFinish(' + selectedBib + ')">⟲</button></span>';
+      } else {
+        html += '<button class="btn btn-accent" onclick="doFinish(' + selectedBib + ')">Zaznamenat</button>';
+      }
+      html += "</div>";
+
+      html += '<button class="btn btn-danger btn-block" style="margin-top:8px;" onclick="doWithdraw(' + selectedBib + ')">Vzdát se / vyřadit ze závodu</button>';
+    } else if (runner.status === "dnf") {
+      html += '<button class="btn btn-block" onclick="doReinstate(' + selectedBib + ')">Vrátit zpět do závodu (oprava)</button>';
+    } else {
+      html += '<p style="color:var(--text-dim);font-size:14px;">Tento běžec dokončil závod jako vítěz.</p>';
+    }
+
+    html += "</div></div>";
+    return html;
+  }
+
+  function renderResults() {
+    var lapNums = Object.keys(race.laps).map(Number).sort(function (a, b) { return a - b; });
+    if (resultsLap < lapNums[0]) resultsLap = lapNums[0];
+    if (resultsLap > lapNums[lapNums.length - 1]) resultsLap = lapNums[lapNums.length - 1];
+    var lap = race.laps[resultsLap];
+    var lapStart = new Date(lap.startTime);
+    var nextLap = race.laps[resultsLap + 1];
+    var bibs = sortBibsDnfLast(Object.keys(lap.entries).map(Number), function (b) { return lap.entries[b].dnf; });
+    var now = new Date();
+
+    var html = '<div class="panel" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px;">';
+    html += '<div style="display:flex;align-items:center;gap:10px;">';
+    html += '<button class="btn" ' + (resultsLap <= lapNums[0] ? "disabled" : "") + ' onclick="changeResultsLap(-1)">◀</button>';
+    html += '<span class="logo-title" style="font-size:17px;">Kolo ' + resultsLap + '</span>';
+    html += '<button class="btn" ' + (resultsLap >= lapNums[lapNums.length - 1] ? "disabled" : "") + ' onclick="changeResultsLap(1)">▶</button>';
+    html += "</div>";
+    html += '<button class="btn btn-accent" onclick="exportCSV()">⬇ Stáhnout CSV (vše)</button>';
+    html += "</div>";
+
+    html += '<div class="panel table-wrap"><table><thead><tr><th>Bib</th><th>Jméno</th><th>Půlka</th><th>Cíl (čas kola)</th><th>Čas v depu</th><th>Stav</th></tr></thead><tbody>';
+    bibs.forEach(function (bib) {
+      var entry = lap.entries[bib];
+      var runner = race.runners[bib];
+      var halfSplit = entry.halfwayTime ? fmtDuration(new Date(entry.halfwayTime) - lapStart) : "–";
+      var lapTime = entry.finishTime ? fmtDuration(new Date(entry.finishTime) - lapStart) : "–";
+      var depot = "–";
+      var liveAttr = "";
+      if (entry.finishTime) {
+        if (nextLap) depot = fmtDuration(new Date(nextLap.startTime) - new Date(entry.finishTime));
+        else if (race.status === "running" && resultsLap === race.currentLap) {
+          depot = fmtDuration(new Date(race.currentLapStart).getTime() + LAP_DURATION_MS - now.getTime()) + " (běží)";
+          liveAttr = ' data-role="live-depot"';
+        }
+      }
+      var kind = entry.dnf ? "dnf" : entry.finishTime ? "depot" : (runner.status === "winner" ? "winner" : "course");
+      var stavLabel = entry.dnf ? "Nedokončil" : entry.finishTime ? "Dokončil" : "V běhu";
+      html += "<tr><td>#" + bib + "</td><td>" + escapeHtml(runner.name) + "</td><td>" + halfSplit + "</td><td>" + lapTime + "</td><td" + liveAttr + ">" + depot + "</td><td><span class=\"tag tag-" + kind + "\">" + stavLabel + "</span></td></tr>";
+    });
+    html += "</tbody></table></div>";
+    return html;
+  }
+
+  function renderSettings() {
+    var bibs = Object.keys(race.runners).map(Number).sort(function (a, b) { return a - b; });
+    var html = "";
+    html += '<div class="panel" style="margin-bottom:16px;"><div class="logo-title" style="font-size:17px;margin-bottom:10px;">Informace o závodě</div>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:14px;">';
+    html += '<div><div class="header-label">Počet běžců</div>' + race.totalRunners + "</div>";
+    html += '<div><div class="header-label">Aktuální kolo</div>' + race.currentLap + "</div>";
+    html += '<div><div class="header-label">Start 1. kola</div>' + fmtDateTime(race.firstLapStart) + "</div>";
+    html += '<div><div class="header-label">Stav</div>' + race.status + "</div>";
+    html += "</div></div>";
+
+    html += '<div class="panel" style="margin-bottom:16px;"><div class="logo-title" style="font-size:17px;margin-bottom:10px;">Jména běžců</div>';
+    html += '<div style="display:grid;grid-template-columns:1fr;gap:8px;max-height:320px;overflow-y:auto;">';
+    bibs.forEach(function (bib) {
+      html += '<div style="display:flex;align-items:center;gap:8px;"><span class="f-mono" style="width:40px;flex-shrink:0;font-size:13px;color:var(--text-dim);">#' + bib + '</span><input type="text" style="width:100%;" value="' + escapeHtml(race.runners[bib].name) + '" oninput="renameRunner(' + bib + ', this.value)"></div>';
+    });
+    html += "</div></div>";
+
+    html += '<div class="panel"><div class="logo-title" style="font-size:17px;margin-bottom:10px;">Administrace</div><div style="display:flex;flex-direction:column;gap:10px;">';
+    if (confirmRollover) {
+      html += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span style="font-size:13px;color:var(--text-dim);">Opravdu ukončit aktuální kolo nyní?</span><button class="btn btn-danger" onclick="doForceRollover()">Potvrdit</button><button class="btn" onclick="toggleRolloverConfirm(false)">Zpět</button></div>';
+    } else {
+      html += '<button class="btn" ' + (race.status !== "running" ? "disabled" : "") + ' onclick="toggleRolloverConfirm(true)">Vynutit konec kola nyní</button>';
+    }
+    if (confirmReset) {
+      html += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span style="font-size:13px;color:var(--dnf);">Smazat celý závod? Nelze vrátit zpět.</span><button class="btn btn-danger" onclick="doReset()">Ano, smazat</button><button class="btn" onclick="toggleResetConfirm(false)">Zpět</button></div>';
+    } else {
+      html += '<button class="btn btn-danger" onclick="toggleResetConfirm(true)">Smazat závod a začít nový</button>';
+    }
+    html += "</div></div>";
+    return html;
+  }
+
+  /* ------------------------------ live tick -------------------------------*/
+
+  function tick() {
+    var now = new Date();
+    if (race) {
+      var changed = false;
+      if (race.status === "pending") {
+        if (now >= new Date(race.firstLapStart)) {
+          updateRace(function (draft) { draft.status = "running"; });
+          changed = true;
+        }
+      } else if (race.status === "running") {
+        var deadline = new Date(race.currentLapStart).getTime() + LAP_DURATION_MS;
+        if (now.getTime() >= deadline) {
+          updateRace(function (draft) { performRolloverMutate(draft); });
+          changed = true;
+        }
+      }
+      if (changed) { render(); return; }
+    }
+    liveUpdate(now);
+  }
+
+  function liveUpdate(now) {
+    if (!race) return;
+    if (tab === "board") {
+      var clockEl = document.getElementById("headerClock");
+      if (clockEl) clockEl.textContent = fmtClock(now);
+
+      var cd = document.getElementById("headerCountdown");
+      var deadlineMs = new Date(race.currentLapStart).getTime() + LAP_DURATION_MS;
+      var msToDeadline = race.status === "running" ? deadlineMs - now.getTime() : null;
+      if (cd) {
+        if (race.status === "pending") cd.textContent = fmtDuration(new Date(race.firstLapStart).getTime() - now.getTime());
+        else if (race.status === "running") cd.textContent = fmtDuration(msToDeadline);
+      }
+
+      var lapStart = new Date(race.currentLapStart);
+      document.querySelectorAll(".bib-tile").forEach(function (tileEl) {
+        var kind = tileEl.getAttribute("data-kind");
+        var warn = race.status === "running" && msToDeadline !== null && msToDeadline < 5 * 60000 && (kind === "course" || kind === "halfway");
+        tileEl.classList.toggle("warn", warn);
+        if (kind === "course") {
+          var tagEl = tileEl.querySelector('[data-role="tile-tag"]');
+          if (tagEl) tagEl.textContent = race.status === "running" ? fmtDuration(now - lapStart) : "—";
+        }
+      });
+    }
+    if (tab === "results") {
+      document.querySelectorAll('[data-role="live-depot"]').forEach(function (td) {
+        var deadline = new Date(race.currentLapStart).getTime() + LAP_DURATION_MS;
+        td.textContent = fmtDuration(deadline - now.getTime()) + " (běží)";
+      });
+    }
+  }
+
+  /* --------------------------------- CSV -----------------------------------*/
+
+  function buildCSV(r) {
+    var rows = [["Bib", "Jméno", "Kolo", "Start kola", "Půlka", "Mezičas půlky", "Cíl", "Čas kola", "Start dalšího kola", "Čas v depu", "Stav"]];
+    var lapNums = Object.keys(r.laps).map(Number).sort(function (a, b) { return a - b; });
+    lapNums.forEach(function (lapNum) {
+      var lap = r.laps[lapNum];
+      var lapStart = new Date(lap.startTime);
+      var nextLap = r.laps[lapNum + 1];
+      sortBibsDnfLast(Object.keys(lap.entries).map(Number), function (b) { return lap.entries[b].dnf; }).forEach(function (bib) {
+        var entry = lap.entries[bib];
+        var runner = r.runners[bib];
+        var lapTime = entry.finishTime ? fmtDuration(new Date(entry.finishTime) - lapStart) : "";
+        var halfSplit = entry.halfwayTime ? fmtDuration(new Date(entry.halfwayTime) - lapStart) : "";
+        var depot = "";
+        if (entry.finishTime && nextLap) depot = fmtDuration(new Date(nextLap.startTime) - new Date(entry.finishTime));
+        var stav = entry.dnf ? "DNF" : entry.finishTime ? "Dokončil" : "Nedokončeno";
+        rows.push([bib, runner.name, lapNum, fmtDateTime(lap.startTime),
+          entry.halfwayTime ? fmtDateTime(entry.halfwayTime) : "", halfSplit,
+          entry.finishTime ? fmtDateTime(entry.finishTime) : "", lapTime,
+          nextLap ? fmtDateTime(nextLap.startTime) : "", depot, stav]);
+      });
+    });
+    return rows.map(function (row) {
+      return row.map(function (c) { return '"' + String(c).replace(/"/g, '""') + '"'; }).join(";");
+    }).join("\n");
+  }
+
+  function downloadCSV(r) {
+    var csv = buildCSV(r);
+    var blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "vysledky_zavodu_" + new Date().toISOString().slice(0, 10) + ".csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  /* ------------------------------ event handlers ---------------------------*/
+
+  window.setTab = function (t) {
+    tab = t; selectedBib = null;
+    if (t === "results") resultsLap = race.currentLap;
+    render();
+  };
+
+  window.handleSetupSubmit = function () {
+    var nEl = document.getElementById("setupRunners");
+    var sEl = document.getElementById("setupStart");
+    var errEl = document.getElementById("setupError");
+    var n = Number(nEl.value);
+    if (!n || n < 1 || n > 999) { errEl.textContent = "Zadejte počet běžců mezi 1 a 999."; errEl.style.display = "block"; return; }
+    var start = new Date(sEl.value);
+    if (isNaN(start.getTime())) { errEl.textContent = "Zadejte platný čas startu prvního kola."; errEl.style.display = "block"; return; }
+    race = createRace(n, start.toISOString());
+    tab = "board"; selectedBib = null;
+    render();
+    setSyncStatus("syncing");
+    setDoc(raceDocRef, race)
+      .then(function () { setSyncStatus("online"); })
+      .catch(function (e) { setSyncStatus("error"); notify("Uložení na server selhalo: " + e.message); });
+  };
+
+  window.handleBibSearchKeydown = function (e) { if (e.key === "Enter") submitBibSearch(); };
+
+  window.submitBibSearch = function () {
+    var input = document.getElementById("bibSearchInput");
+    var n = Number(input.value);
+    if (!n || !race.runners[n]) { notify("Neznámé startovní číslo"); input.value = ""; return; }
+    selectedBib = n;
+    input.value = "";
+    render();
+  };
+
+  window.selectBib = function (bib) { selectedBib = bib; render(); };
+  window.closeSheet = function () { selectedBib = null; render(); };
+
+  window.doHalfway = function (bib) {
+    updateRace(function (draft) {
+      var entry = draft.laps[draft.currentLap].entries[bib];
+      if (entry && !entry.finishTime) entry.halfwayTime = new Date().toISOString();
+    });
+    notify("#" + bib + " — zaznamenána polovina");
+    render();
+  };
+
+  window.undoHalfway = function (bib) {
+    updateRace(function (draft) { draft.laps[draft.currentLap].entries[bib].halfwayTime = null; });
+    render();
+  };
+
+  window.doFinish = function (bib) {
+    updateRace(function (draft) {
+      var entry = draft.laps[draft.currentLap].entries[bib];
+      if (entry) entry.finishTime = new Date().toISOString();
+    });
+    notify("#" + bib + " — zaznamenán cíl");
+    selectedBib = null;
+    render();
+  };
+
+  window.undoFinish = function (bib) {
+    updateRace(function (draft) { draft.laps[draft.currentLap].entries[bib].finishTime = null; });
+    render();
+  };
+
+  window.doWithdraw = function (bib) {
+    updateRace(function (draft) {
+      draft.runners[bib].status = "dnf";
+      draft.runners[bib].dnfLap = draft.currentLap;
+      var lap = draft.laps[draft.currentLap];
+      if (lap.entries[bib]) lap.entries[bib].dnf = true;
+      checkWinnerMutate(draft);
+    });
+    notify("#" + bib + " — vyřazen ze závodu");
+    selectedBib = null;
+    render();
+  };
+
+  window.doReinstate = function (bib) {
+    updateRace(function (draft) {
+      if (draft.status !== "running") return;
+      draft.runners[bib].status = "active";
+      draft.runners[bib].dnfLap = null;
+      var lap = draft.laps[draft.currentLap];
+      if (lap.entries[bib]) lap.entries[bib].dnf = false;
+    });
+    notify("#" + bib + " — vrácen do závodu");
+    selectedBib = null;
+    render();
+  };
+
+  window.renameRunner = function (bib, value) {
+    if (!race) return;
+    race.runners[bib].name = value;
+    // bez render() — aby se neztratil kurzor při psaní
+    setDoc(raceDocRef, race).catch(function (e) { notify("Uložení jména selhalo: " + e.message); });
+  };
+
+  window.changeResultsLap = function (delta) {
+    var lapNums = Object.keys(race.laps).map(Number).sort(function (a, b) { return a - b; });
+    resultsLap = Math.max(lapNums[0], Math.min(lapNums[lapNums.length - 1], resultsLap + delta));
+    render();
+  };
+
+  window.exportCSV = function () { downloadCSV(race); };
+
+  window.toggleRolloverConfirm = function (v) { confirmRollover = v; render(); };
+  window.toggleResetConfirm = function (v) { confirmReset = v; render(); };
+
+  window.doForceRollover = function () {
+    updateRace(function (draft) { performRolloverMutate(draft); });
+    confirmRollover = false;
+    notify("Kolo bylo ukončeno manuálně");
+    render();
+  };
+
+  window.doReset = function () {
+    race = null; selectedBib = null; tab = "board"; confirmReset = false; confirmRollover = false;
+    render();
+    setSyncStatus("syncing");
+    deleteDoc(raceDocRef)
+      .then(function () { setSyncStatus("online"); })
+      .catch(function (e) { setSyncStatus("error"); notify("Smazání na serveru selhalo: " + e.message); });
+  };
+
+  /* --------------------------------- boot -----------------------------------*/
+
+  onSnapshot(
+    raceDocRef,
+    function (snap) {
+      raceLoaded = true;
+      race = snap.exists() ? snap.data() : null;
+      setSyncStatus("online");
+      render();
+    },
+    function (err) {
+      raceLoaded = true;
+      setSyncStatus("error");
+      notify("Chyba připojení k serveru: " + err.message);
+      render();
+    }
+  );
+
+  setInterval(tick, 1000);
+  render();
+})();
+</script>
+</body>
+</html>
